@@ -34,8 +34,8 @@ which_columns = {
 
 def save_columns(ds, these_columns, save_dir):
   how_many_cols = len(these_columns['lons'])
-  for i in range(how_many_cols):
-    lon = these_columns['lons'][i]
+  for i in range(2, how_many_cols):
+    lon = these_columns['lons'][i] % 360 # lon is in [0,360] in the data set
     lat = these_columns['lats'][i]
     name = these_columns['save_name'][i]
     filename = save_dir+'/five_columns_'+name+'.nc'
