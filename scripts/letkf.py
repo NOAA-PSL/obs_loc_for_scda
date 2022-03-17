@@ -16,20 +16,6 @@ def calculate_normalized_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob):
   norm_dist = np.abs(np.divide(pos_state,loc_rad_state) - np.divide(pos_ob,loc_rad_ob))
   return norm_dist
 
-def calculate_log_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob):
-  """Computes distance between state variable and observations normalized by localization radii
-  
-  Inputs:
-  pos_state -- position of the state variable
-  pos_ob -- position of the observations
-  loc_rad_state -- localization radius associated with the state variable
-  loc_rad_ob -- localization radius associated with the observations
-
-  Outputs:
-  norm_dist -- normalized distance
-  """
-  norm_dist = np.abs(np.divide(np.log(np.abs(101648.22-pos_state)),loc_rad_state) - np.divide(pos_ob,loc_rad_ob))
-  return norm_dist
 
 def select_local_obs(norm_dist, *args):
   """Selects observations within a certain radius of a given grid point
@@ -77,7 +63,7 @@ def separate_mean_pert(ens):
 
   return avg, pert 
 
-def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate):
+def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc=True):
   """Compute the LETKF update for a single grid point
 
   Inputs:
@@ -107,10 +93,7 @@ def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_s
   loc_rad_state = loc_rad_state[which_state]
 
   # Select local observation(s)
-  if pos_state > 0:
-    norm_dist = calculate_log_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob)
-  else:
-    norm_dist = calculate_normalized_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob)
+  norm_dist = calculate_normalized_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob)
   select_these = norm_dist <= 1  
 
   if np.any(select_these): # Update with local observations
@@ -123,8 +106,9 @@ def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_s
     #norm_dist = norm_dist[[select_these]]
     
     # Compute ob space localization
-    loc_inv = gaspari_cohn(2*norm_dist)    
-    R_inv = R_inv * loc_inv
+    if use_loc:
+      loc_inv = gaspari_cohn(2*norm_dist)    
+      R_inv = R_inv * loc_inv
 
     # Compute C = y_ens^T * R_inv
     C = np.transpose(y_ens) @ np.atleast_2d(np.diag(R_inv))
@@ -133,7 +117,7 @@ def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_s
     CY = C @ y_ens
     CY = 0.5 * (CY + np.transpose(CY))
     work = ((ens_size-1)/inflate) * np.eye(ens_size) + CY
-    evals, evecs = np.linalg.eig(work)
+    evals, evecs = np.linalg.eigh(work)
     evals_inv = np.reciprocal(evals)
     Pa = evecs @ np.diag(evals_inv) @ np.transpose(evecs)
 
@@ -152,7 +136,7 @@ def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_s
 
   return analysis_ens
 
-def letkf(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate):
+def letkf(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc=True):
   """Compute the LETKF update
 
   Inputs:
@@ -184,7 +168,7 @@ def letkf(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob
   # Loop over each vertical level
   analysis_ens = np.empty_like(x_ens)
   for ind in range(num_levels):
-    analysis_ens[ind,] = letkf_inner_loop(ind, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate)
+    analysis_ens[ind,] = letkf_inner_loop(ind, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc)
 
   # Compute analysis mean and covariance
   analysis_mean = np.mean(analysis_ens, 1)
