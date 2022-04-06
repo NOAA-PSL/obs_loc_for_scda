@@ -1,5 +1,4 @@
 import numpy as np
-#import xarray as xr
 
 def calculate_normalized_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob):
   """Computes distance between state variable and observations normalized by localization radii
@@ -94,7 +93,7 @@ def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_s
 
   # Select local observation(s)
   norm_dist = calculate_normalized_distance(pos_state, pos_ob, loc_rad_state, loc_rad_ob)
-  select_these = norm_dist <= 1  
+  select_these = norm_dist < 1  
 
   if np.any(select_these): # Update with local observations
     # Select local observations
@@ -136,8 +135,8 @@ def letkf_inner_loop(which_state, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_s
 
   return analysis_ens
 
-def letkf(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc=True):
-  """Compute the LETKF update
+def letkf_one_domain(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc=True):
+  """Compute the LETKF update with a given observation operator HofX
 
   Inputs:
   x_ens -- background ensemble
@@ -178,3 +177,41 @@ def letkf(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob
 
 
 
+def letkf(x_ens, y_ens, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc=True):
+  """Compute the LETKF update with a given background observation ensemble
+
+  Inputs:
+  x_ens -- background ensemble
+  y_ens -- background observation ensemble
+  R_inv -- inverse observation error variances (stored as 1d object)
+  y_ob -- observations
+  pos_state -- positions of state variables
+  pos_ob -- positions of the observations
+  loc_rad_state -- localization radius associated with state variable
+  loc_rad_ob -- localization radius associated with observations
+  inflate -- multiplicative inflation factor
+
+  Outputs:
+  analysis_mean -- analysis mean
+  analysis_cov -- analysis covariance matrix
+  analysis_ens -- analysis ensemble
+  """
+  # Get domain size
+  num_levels, ens_size = x_ens.shape
+ 
+  # Form background observation perturbations
+  y_avg, y_ens = separate_mean_pert(y_ens)
+  
+  # Form background ensemble perturbations
+  x_avg, x_ens = separate_mean_pert(x_ens)
+
+  # Loop over each vertical level
+  analysis_ens = np.empty_like(x_ens)
+  for ind in range(num_levels):
+    analysis_ens[ind,] = letkf_inner_loop(ind, x_avg, x_ens, y_avg, y_ens, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate, use_loc)
+
+  # Compute analysis mean and covariance
+  analysis_mean = np.mean(analysis_ens, 1)
+  analysis_cov = np.cov(analysis_ens)
+
+  return analysis_mean, analysis_cov 
