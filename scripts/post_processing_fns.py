@@ -1,4 +1,5 @@
 import numpy as np
+from letkf import *
 
 def dens_wright_eos(T, S, p):
   """
@@ -17,7 +18,7 @@ def dens_wright_eos(T, S, p):
   
   return rho
 
-def compute_analysis_err(observe_this_level, localization_radii, this_cov, this_cov_sqrt, pos_state, ens_size = 20, start=0, stop=37):
+def compute_analysis_err_one_domain(observe_this_level, localization_radii, this_cov, this_cov_sqrt, pos_state, ens_size = 20, start=0, stop=37):
     ## Set observation operator
     num_levs = this_cov.shape[0]
     HofX = np.zeros((1, num_levs))
@@ -54,7 +55,7 @@ def compute_analysis_err(observe_this_level, localization_radii, this_cov, this_
         loc_rad_state = np.full_like(pos_state, localization_radius)
         loc_rad_ob = np.full_like(pos_ob, localization_radius)
         # Get analysis mean
-        analysis_mean = letkf(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate=1)[0]
+        analysis_mean = letkf_one_domain(x_ens, HofX, R_inv, y_ob, pos_state, pos_ob, loc_rad_state, loc_rad_ob, inflate=1)[0]
         this_increment = analysis_mean - background_mean
         da_increment[:, loc_ind] = this_increment
         # Get analysis error
@@ -62,10 +63,10 @@ def compute_analysis_err(observe_this_level, localization_radii, this_cov, this_
     
     return analysis_error, da_increment, kf_increment, innovation
 
-def run_multiple_trials(observe_this_level, localization_radii, this_cov, this_cov_sqrt, pos_state, num_trials = 100):
+def run_multiple_trials_one_domain(observe_this_level, localization_radii, this_cov, this_cov_sqrt, pos_state, num_trials = 100, start=0, stop=37):
     errs = np.empty((len(localization_radii), num_trials))
     for trial in range(num_trials):
-        analysis_error = compute_analysis_err(observe_this_level=observe_this_level, localization_radii=localization_radii, this_cov=this_cov, this_cov_sqrt=this_cov_sqrt, pos_state=pos_state)[0]
+        analysis_error = compute_analysis_err_one_domain(observe_this_level=observe_this_level, localization_radii=localization_radii, this_cov=this_cov, this_cov_sqrt=this_cov_sqrt, pos_state=pos_state, start=start, stop=stop)[0]
         errs[:, trial] = analysis_error
     avg_err = np.mean(errs, axis=1)
     return avg_err
