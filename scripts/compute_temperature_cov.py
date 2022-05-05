@@ -19,6 +19,14 @@ which_columns = {
   'save_name' : ['south_pacific', 'southern_ocean', 'indian_ocean', 'tropical_pacific', 'north_pacific']
 }
 
+## Pick columns
+which_columns2 = {
+  'lons' : [-154.5, 35.5, 75.5, -150.5, 160.5],
+  'lats' : [-27.5, -49.5, -31.5, 12.5, 40.5],
+  'name' : ['South Pacific', 'Southern Ocean', 'Indian Ocean', 'Tropical Pacific', 'North Pacific'],
+  'save_name' : ['south_pacific2', 'southern_ocean2', 'indian_ocean2', 'tropical_pacific2', 'north_pacific2']
+}
+
 def get_cov_cor(column_name):
   ds = xr.open_dataset(my_data_dir+'/five_columns_'+column_name+'.nc')
   ## Define relevant dimensions
@@ -58,7 +66,7 @@ def get_cov_cor(column_name):
 
 def save_cov_cor(these_columns, save_dir):
   how_many_cols = len(these_columns['lons'])
-  for i in range(how_many_cols):
+  for i in range(how_many_cols-1):
     print(i)
     save_name = these_columns['save_name'][i]
     cov_temp, cor_temp = get_cov_cor(save_name)
@@ -67,6 +75,6 @@ def save_cov_cor(these_columns, save_dir):
     np.save(save_dir+'/'+save_name+'_cor.npy', cor_temp)
 
 
-save_cov_cor(which_columns, my_data_dir)
+save_cov_cor(which_columns2, my_data_dir)
 
 
