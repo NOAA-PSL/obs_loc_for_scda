@@ -7,15 +7,18 @@ from load_data_fns import *
 
 ## Where are we working
 proj_dir = '/work/noaa/gsienkf/zstanley/projects/obs_loc'
-data_dir = proj_dir + '/data'
+#data_dir = proj_dir + '/data'
+data_dir = '/work2/noaa/gsienkf/weihuang/WCLEKF_PRODFORECAST/20151205000000/production/latlongrid-20151206.030000/AtmOcnIce'
 plot_dir = proj_dir + '/plots'
-my_data_dir = proj_dir +'/my_data'
+#my_data_dir = proj_dir +'/my_data'
+my_data_dir = proj_dir +'/my_data/20151206.030000'
 
 ## Open netcdf files with xarray
 ds = xr.open_mfdataset(data_dir+'/ens1*.nc', autoclose=True, preprocess=preprocess)
 
 ## Get 2-d correlations
 sst_t2m_corr = xr.corr(ds['sst'], ds['atm_t2m'], dim='ens_mem')
+sst_t2m_corr.to_netcdf(my_data_dir+'/sst_ast_corr.nc')
 
 ## Get columns
 def get_column(ds, lon, lat):
@@ -34,7 +37,8 @@ which_columns = {
 
 def save_columns(ds, these_columns, save_dir):
   how_many_cols = len(these_columns['lons'])
-  for i in range(2, how_many_cols):
+  for i in range(how_many_cols):
+    print(i)
     lon = these_columns['lons'][i] % 360 # lon is in [0,360] in the data set
     lat = these_columns['lats'][i]
     name = these_columns['save_name'][i]
