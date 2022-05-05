@@ -9,7 +9,6 @@ from load_data_fns import *
 proj_dir = '/work/noaa/gsienkf/zstanley/projects/obs_loc'
 #data_dir = proj_dir + '/data'
 data_dir = '/work2/noaa/gsienkf/weihuang/WCLEKF_PRODFORECAST/20151205000000/production/latlongrid-20151206.030000/AtmOcnIce'
-plot_dir = proj_dir + '/plots'
 #my_data_dir = proj_dir +'/my_data'
 my_data_dir = proj_dir +'/my_data/20151206.030000'
 
@@ -35,9 +34,17 @@ which_columns = {
   'save_name' : ['south_pacific', 'southern_ocean', 'indian_ocean', 'tropical_pacific', 'north_pacific']
 }
 
+## Pick columns
+which_columns2 = {
+  'lons' : [-154.5, 35.5, 75.5, -150.5, 160.5],
+  'lats' : [-27.5, -49.5, -31.5, 12.5, 40.5],
+  'name' : ['South Pacific', 'Southern Ocean', 'Indian Ocean', 'Tropical Pacific', 'North Pacific'],
+  'save_name' : ['south_pacific2', 'southern_ocean2', 'indian_ocean2', 'tropical_pacific2', 'north_pacific2']
+}
+
 def save_columns(ds, these_columns, save_dir):
   how_many_cols = len(these_columns['lons'])
-  for i in range(how_many_cols):
+  for i in range(2,how_many_cols-2):
     print(i)
     lon = these_columns['lons'][i] % 360 # lon is in [0,360] in the data set
     lat = these_columns['lats'][i]
@@ -46,4 +53,4 @@ def save_columns(ds, these_columns, save_dir):
     columns = get_column(ds, lon=lon, lat=lat)
     columns.to_netcdf(filename) 
 
-save_columns(ds, which_columns, my_data_dir)
+save_columns(ds, which_columns2, my_data_dir)
