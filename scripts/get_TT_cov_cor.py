@@ -1,9 +1,6 @@
-import netCDF4 as nc
 import xarray as xr
 import numpy as np
-from multiprocessing import Pool
 from os.path import exists
-from scipy import stats
 from xarray.core.alignment import align
 from load_data_fns import *
 
@@ -37,6 +34,7 @@ def clean_ds(ds):
 def save_reduced_dataset(ds):
     ## Save reduced dataset
     ds.to_netcdf(my_data_dir+'/coupled_temperature_fields.nc')
+    return None
     
 def open_reduced_dataset():
     ds = xr.open_dataset(my_data_dir+'/coupled_temperature_fields.nc')
@@ -52,6 +50,7 @@ def reduce_vertical_levels(ds):
 def save_dataset_with_fewer_vertical_levels(ds):
     ## Save reduced dataset with fewer vertical levels
     ds.to_netcdf(my_data_dir+'/coupled_temperature_fields_100hPa_to_500m.nc')
+    return None
 
 def open_dataset_with_fewer_vertical_levels():
     ds = xr.open_dataset(my_data_dir+'/coupled_temperature_fields_100hPa_to_500m.nc')
@@ -68,6 +67,8 @@ def compute_covariances(ds, ddof=1, slice_lat=slice(-89.5, 89.5)):
     ddof:      delta degrees of freedom. ddof=1 (default) gives unbiased estimate
     slice_lat: latitude band over which to do computations 
     '''
+    ## 0. Slice to manually parallelize
+    ds = ds.sel(lat=slice_lat)
     ## 1. Compute mean and perturbations
     ds_mean = ds[keep_ens_variables].mean(dim=['ens_mem'])
     ds_pert = ds[keep_ens_variables] - ds_mean
@@ -78,29 +79,21 @@ def compute_covariances(ds, ddof=1, slice_lat=slice(-89.5, 89.5)):
     da_ocn = ds_pert['ocn_Temp'].where(ds['ocn_msk'])
     ## 4. Broadcast the two arrays
     da_atm, da_ocn = align(da_atm, da_ocn, join="inner", copy=False)
-    ## 5. Slice lat to manually parallelize
-    da_atm = da_atm.sel(lat=slice_lat)
-    da_ocn = da_ocn.sel(lat=slice_lat)
-    ## 6. Compute covariance
+    ## 5. Compute covariance
     ds_cov = xr.Dataset()
     ds_cov['cov_atm_ocn'] = (da_atm * da_ocn).sum(dim='ens_mem', skipna=False) / normalized_count
     ds_cov['cov_atm_atm'] = (da_atm * da_atm.rename(atm_lev='atm_lev_copy')).sum(dim='ens_mem', skipna=False) / normalized_count
     ds_cov['cov_ocn_ocn'] = (da_ocn * da_ocn.rename(ocn_lev='ocn_lev_copy')).sum(dim='ens_mem', skipna=False) / normalized_count
-    ## 7. Add vertical levels to covariance data set
+    ## 6. Add vertical levels to covariance data set
     ds_cov['atm_p'] = ds['atm_p']
     ds_cov['ocn_z'] = ds['ocn_z']
     return ds_cov
 
-def compute_covariances_for_latitude_bands(slice_lat):
-    ds_cov = compute_covariances(ds, slice_lat=slice_lat)
-    return ds_cov
-
-def compute_covariances_with_pool():
+def compute_covariances_for_full_domain(ds):
     ## Cut size by three to fit in memory
-    latitude_bands = [slice(30.5, 89.5, 1), slice(-29.5, 29.5, 1), slice(-89.5, -30.5, 1)]
-    ## Use multiprocessing
-    p = Pool(3)
-    nh, tr, sh = p.map(compute_covariances_for_latitude_bands, latitude_bands)
+    nh = compute_covariances(ds, slice_lat = slice(30.5, 89.5, 1))
+    tr = compute_covariances(ds, slice_lat = slice(-29.5, 29.5, 1))
+    sh = compute_covariances(ds, slice_lat = slice(-89.5, -30.5, 1))
     # Merge three lat bands back together
     ds_cov = xr.merge([nh, tr, sh])
     return ds_cov
@@ -108,6 +101,7 @@ def compute_covariances_with_pool():
 def save_raw_covariances(ds_cov):
     # Save covariances
     ds_cov.to_netcdf(my_data_dir+'/temperature_covariances_raw.nc')
+    return None
     
 def open_raw_covariances():
     ds_cov = xr.open_dataset(my_data_dir+'/temperature_covariances_raw.nc')
@@ -136,11 +130,56 @@ def compute_averaged_covariances(ds_cov):
 
 def save_averaged_covariances(ds_cov_avg):
     ## Save averaged covariances
-    rolling_cov.to_netcdf(my_data_dir+'/temperature_covariances_averaged.nc')
+    ds_cov_avg.to_netcdf(my_data_dir+'/temperature_covariances_averaged.nc')
+    return None
+    
+def open_averaged_covariances():
+    ds_cov_avg = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc')
+    return ds_cov_avg
+
+def compute_correlations(ds_cov, ds, ddof=1):
+    # Compute std
+    da_atm = ds['atm_T'].where(ds['ocn_msk'])
+    da_ocn = ds['ocn_Temp'].where(ds['ocn_msk'])
+    da_atm_std = da_atm.std(dim='ens_mem', ddof=ddof)
+    da_ocn_std = da_ocn.std(dim='ens_mem', ddof=ddof)
+    # Compute correlations
+    ds_corr = xr.Dataset()
+    ds_corr['corr_atm_atm'] = ds_cov['cov_atm_atm'] / (da_atm_std * da_atm_std.rename(atm_lev='atm_lev_copy'))
+    ds_corr['corr_atm_ocn'] = ds_cov['cov_atm_ocn'] / (da_atm_std * da_ocn_std)
+    ds_corr['corr_ocn_ocn'] = ds_cov['cov_ocn_ocn'] / (da_ocn_std * da_ocn_std.rename(ocn_lev='ocn_lev_copy'))
+    return ds_corr
+
+def save_raw_correlations(ds_corr):
+    ## Save averaged covariances
+    ds_corr.to_netcdf(my_data_dir+'/temperature_correlations_raw.nc')
+    return None
+    
+def open_raw_correlations():
+    ds_corr = xr.open_dataset(my_data_dir+'/temperature_correlations_raw.nc')
+    return ds_corr
+
+def compute_averaged_correlations(ds_corr):
+    ds_corr_avg = compute_averaged_covariances(ds_corr)
+    return ds_corr_avg
+
+def save_averaged_correlations(ds_corr_avg):
+    ## Save averaged covariances
+    ds_corr_avg.to_netcdf(my_data_dir+'/temperature_correlations_averaged.nc')
+    return None
+    
+def open_averaged_correlations():
+    ds_corr_avg = xr.open_dataset(my_data_dir+'/temperature_correlations_averaged.nc')
+    return ds_corr_avg
+
+def save_cross_correlations_averaged(ds_corr_avg):
+    ds_corr_avg['corr_atm_ocn'].to_netcdf(my_data_dir+'/temperature_cross_correlations_averaged.nc')
+    return None
     
 def main():
     ''' This computes T-T covariances, saving intermediate steps along the way. '''
     
+    ## Compute covariances
     # If averaged covariances exist, print and exit
     if exists(my_data_dir+'/temperature_covariances_averaged.nc'):
         print('Hooray! Averaged covariances have already been created.')
@@ -161,7 +200,7 @@ def main():
         ds = open_dataset_with_fewer_vertical_levels()
         ds = define_ocean_mask(ds)
         # Compute raw covariances
-        ds_cov = compute_covariances_with_pool()
+        ds_cov = compute_covariances_for_full_domain(ds)
         save_raw_covariances(ds_cov)
         # Average covariances
         ds_cov_avg = compute_averaged_covariances(ds_cov)
@@ -177,7 +216,7 @@ def main():
         # Define ocean mask
         ds = define_ocean_mask(ds)
         # Compute raw covariances
-        ds_cov = compute_covariances_with_pool()
+        ds_cov = compute_covariances_for_full_domain(ds)
         save_raw_covariances(ds_cov)
         # Average covariances
         ds_cov_avg = compute_averaged_covariances(ds_cov)
@@ -197,11 +236,40 @@ def main():
         # Define ocean mask
         ds = define_ocean_mask(ds)
         # Compute raw covariances
-        ds_cov = compute_covariances_with_pool()
+        ds_cov = compute_covariances_for_full_domain(ds)
         save_raw_covariances(ds_cov)
         # Average covariances
         ds_cov_avg = compute_averaged_covariances(ds_cov)
         save_averaged_covariances(ds_cov_avg)
+        
+    ## Compute correlations
+    # If averaged correlations already exist, we are done
+    if exists(my_data_dir+'/temperature_correlations_averaged.nc'):
+        print('Hooray! Averaged correlations have already been created.')
+    
+    # If raw correlations exist, we only need to average.
+    elif exists(my_data_dir+'/temperature_correlations_raw.nc'):
+        print('Found raw correlations. Proceeding to average.')
+        ds_corr = open_raw_correlations()
+        # Average correlations
+        ds_corr_avg = compute_averaged_correlations(ds_corr)
+        save_averaged_correlations(ds_corr_avg)
+        
+    # Else open raw covariances and compute raw and averaged correlations
+    else:
+        print('Opening covariances to compute raw and averaged correlations.')
+        # Open raw covariances
+        ds_cov = open_raw_covariances()
+        ds = open_dataset_with_fewer_vertical_levels()
+        ds = define_ocean_mask(ds)
+        # Compute raw correlations
+        ds_corr = compute_correlations(ds_cov, ds, ddof=1)
+        save_raw_correlations(ds_corr)
+        # Average correlations
+        ds_corr_avg = compute_averaged_correlations(ds_corr)
+        save_averaged_correlations(ds_corr_avg)
+        
+    return None
         
         
 if __name__ == '__main__':
