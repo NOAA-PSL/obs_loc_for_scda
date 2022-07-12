@@ -149,8 +149,8 @@ def compute_correlations(ds_cov, ds, ddof=1):
     ds_corr['corr_atm_ocn'] = ds_cov['cov_atm_ocn'] / (da_atm_std * da_ocn_std)
     ds_corr['corr_ocn_ocn'] = ds_cov['cov_ocn_ocn'] / (da_ocn_std * da_ocn_std.rename(ocn_lev='ocn_lev_copy'))
     ## Add vertical levels to correlation data set
-    ds_cov['atm_p'] = ds['atm_p']
-    ds_cov['ocn_z'] = ds['ocn_z']
+    ds_corr['atm_p'] = ds['atm_p']
+    ds_corr['ocn_z'] = ds['ocn_z']
     return ds_corr
 
 def save_raw_correlations(ds_corr):
