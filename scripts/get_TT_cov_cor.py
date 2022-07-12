@@ -148,6 +148,9 @@ def compute_correlations(ds_cov, ds, ddof=1):
     ds_corr['corr_atm_atm'] = ds_cov['cov_atm_atm'] / (da_atm_std * da_atm_std.rename(atm_lev='atm_lev_copy'))
     ds_corr['corr_atm_ocn'] = ds_cov['cov_atm_ocn'] / (da_atm_std * da_ocn_std)
     ds_corr['corr_ocn_ocn'] = ds_cov['cov_ocn_ocn'] / (da_ocn_std * da_ocn_std.rename(ocn_lev='ocn_lev_copy'))
+    ## Add vertical levels to correlation data set
+    ds_cov['atm_p'] = ds['atm_p']
+    ds_cov['ocn_z'] = ds['ocn_z']
     return ds_corr
 
 def save_raw_correlations(ds_corr):
@@ -173,7 +176,7 @@ def open_averaged_correlations():
     return ds_corr_avg
 
 def save_cross_correlations_averaged(ds_corr_avg):
-    ds_corr_avg['corr_atm_ocn'].to_netcdf(my_data_dir+'/temperature_cross_correlations_averaged.nc')
+    ds_corr_avg[['corr_atm_ocn', 'atm_p', 'ocn_z']].to_netcdf(my_data_dir+'/temperature_cross_correlations_averaged.nc')
     return None
     
 def main():
