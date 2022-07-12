@@ -253,3 +253,6 @@ data
 coupled_temperature_fields*.nc
 temperature_covariances_averaged.nc
 temperature_covariances_raw.nc
+temperature_correlations_averaged.nc
+temperature_correlations_raw.nc
+temperature_cross_correlations_averaged.nc
