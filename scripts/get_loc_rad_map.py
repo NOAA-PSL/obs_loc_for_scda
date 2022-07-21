@@ -98,6 +98,25 @@ class CovColumn:
         self.locrad_gc_ast_ocn = optimize.minimize_scalar(self.costfn_gc, args=(self.cov_cpl[self.len_atm:, self.ind_ast], self.ens_cov_ast_ocn, self.dist_ocn)).x
         self.locrad_gc_sst_atm = optimize.minimize_scalar(self.costfn_gc, args=(self.cov_cpl[:self.len_atm, self.ind_sst], self.ens_cov_sst_atm, self.dist_atm)).x
         self.locrad_gc_sst_ocn = optimize.minimize_scalar(self.costfn_gc, args=(self.cov_cpl[self.len_atm:, self.ind_sst], self.ens_cov_sst_ocn, self.dist_ocn)).x
+    #
+    def get_optimal_locs_rads(self):
+        return [self.locrad_gc_ast_atm, self.locrad_gc_ast_ocn, self.locrad_gc_sst_atm, self.locrad_gc_sst_ocn]
+        
+        
+def get_loc_rads_for_lat_lon(lat, lon):
+    ''' Get optimal localization radii for a given lat/lon point
+    returns loc rad for [ ast_atm, ast_ocn, sst_atm, sst_ocn ] in that order
+    '''
+    column = ds.sel(lat=lat, lon=lon)
+    # Check for ocean columns by looking at nans
+    if np.isnan(column['cov_atm_ocn'].sel(atm_lev=126, ocn_lev=1).values):
+        return [np.nan, np.nan, np.nan, np.nan]
+    else:
+        cov_col = CovColumn(column)
+        cov_col.set_optimal_loc_rads()
+        result = cov_col.get_optimal_loc_rads
+        return result
+
 
 def main():
     ## Open averaged covariances
@@ -111,15 +130,12 @@ def main():
 
     for lat in ds['lat'].values:
         for lon in ds['lon'].values:
-            column = ds.sel(lat=lat, lon=lon)
-            if  ~np.isnan(column['cov_atm_ocn'].sel(atm_lev=126, ocn_lev=1).values):
-                cov_col = CovColumn(column)
-                cov_col.set_optimal_loc_rads()
-                # Save localization radii
-                ds['loc_rad_gc_ast_atm'].loc[dict(lat=lat, lon=lon)] = cov_col.locrad_gc_ast_atm
-                ds['loc_rad_gc_ast_ocn'].loc[dict(lat=lat, lon=lon)] = cov_col.locrad_gc_ast_ocn
-                ds['loc_rad_gc_sst_atm'].loc[dict(lat=lat, lon=lon)] = cov_col.locrad_gc_sst_atm
-                ds['loc_rad_gc_sst_ocn'].loc[dict(lat=lat, lon=lon)] = cov_col.locrad_gc_sst_ocn
+            result = get_loc_rads_for_lat_lon(lat, lon)
+            # Save localization radii
+            ds['loc_rad_gc_ast_atm'].loc[dict(lat=lat, lon=lon)] = result[0]
+            ds['loc_rad_gc_ast_ocn'].loc[dict(lat=lat, lon=lon)] = result[1]
+            ds['loc_rad_gc_sst_atm'].loc[dict(lat=lat, lon=lon)] = result[2]
+            ds['loc_rad_gc_sst_ocn'].loc[dict(lat=lat, lon=lon)] = result[3]
     
     ds[['loc_rad_gc_ast_atm','loc_rad_gc_ast_ocn','loc_rad_gc_sst_atm','loc_rad_gc_sst_ocn']].to_netcdf(my_data_dir+'/loc_rad_gc.nc')
                 
