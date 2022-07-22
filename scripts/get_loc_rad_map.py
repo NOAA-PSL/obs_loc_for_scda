@@ -139,10 +139,13 @@ def main():
     ds = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc')
     #
     # Store lat/lon pairs
-    lats = ds['lat'].values[arg:arg+10]
+    lats = ds['lat'].values[arg:arg+5]
     lons = ds['lon'].values
     lat_lon_list = list(itertools.product(lats,lons))
     #
+    ## Select these lats
+    lat_slice = slice(lats[0], lats[-1], 1)
+    ds = ds.sel(lat=slice_obj)
     ## Initialize results
     results = [ [None] * 4] * (len(lat_lon_list))
     #
