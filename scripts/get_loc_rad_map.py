@@ -1,5 +1,6 @@
 import itertools
 import time
+import warnings
 from dask import delayed
 from dask.distributed import Client
 import xarray as xr
@@ -58,10 +59,10 @@ class CovColumn:
         if min_eval < -1e6:
             raise ValueError('Matrix is /really/ not positive definite with min eval = '+ str(min_eval))
         elif min_eval < 0 :
-            print('Matrix is not positive definite. Smallest eigenvalue is ' + str(min_eval))
+            warnings.warn('Matrix is not positive definite. Smallest eigenvalue is ' + str(min_eval))
             self.cov_cpl = self.cov_cpl + (-1*min_eval + 1e-13) * np.eye(self.len_cpl)
-        elif ( min_eval > 0 & min_eval < 1e-13):
-            print('Matrix is not positive definite. Smallest eigenvalue is ' + str(min_eval)
+        elif ( min_eval > 0 and min_eval < 1e-13):
+            warnings.warn('Matrix is barely positive semidefinite. Smallest eigenvalue is ' + str(min_eval))
             self.cov_cpl = self.cov_cpl + 1e-13 * np.eye(self.len_cpl)
     #        
     def set_cov_sqrt(self):
@@ -168,5 +169,5 @@ if __name__ == '__main__':
     tic = time.perf_counter()
     main()
     toc = time.perf_counter()
-    print(f"Computed optimal loc in {toc - tic:0.4f} seconds")
+    print(f"Computed optimal loc in {toc - tic:0.4f} seconds", flush=True)
     
