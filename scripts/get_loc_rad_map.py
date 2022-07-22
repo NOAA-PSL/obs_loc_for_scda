@@ -57,9 +57,11 @@ class CovColumn:
         min_eval = np.min(linalg.eigh(self.cov_cpl, eigvals_only=True))
         if min_eval < -1e6:
             raise ValueError('Matrix is /really/ not positive definite with min eval = '+ str(min_eval))
-        elif min_eval < 0:
+        elif min_eval < 0 :
             print('Matrix is not positive definite. Smallest eigenvalue is ' + str(min_eval))
-            self.cov_cpl = self.cov_cpl - (1.1*min_eval) * np.eye(self.len_cpl)
+            self.cov_cpl = self.cov_cpl + (-1*min_eval + 1e-13) * np.eye(self.len_cpl)
+        elif ( min_eval > 0 & min_eval < 1e-13):
+            
     #        
     def set_cov_sqrt(self):
         self._make_cov_pos_def()
