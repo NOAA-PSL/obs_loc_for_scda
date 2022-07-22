@@ -134,7 +134,7 @@ def get_loc_rads_for_lat_lon(lat_lon, ds):
 
 def main():
     ## Get input argument
-    arg = sys.argv[0]
+    arg = int(sys.argv[1])
     ## Open averaged covariances
     ds = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc')
     #
