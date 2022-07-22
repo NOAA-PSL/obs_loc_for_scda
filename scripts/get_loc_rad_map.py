@@ -1,6 +1,7 @@
 import itertools
 import time
 import warnings
+import sys
 from dask import delayed
 from dask.distributed import Client
 import xarray as xr
@@ -132,11 +133,13 @@ def get_loc_rads_for_lat_lon(lat_lon, ds):
         return result
 
 def main():
+    ## Get input argument
+    arg = sys.argv[0]
     ## Open averaged covariances
     ds = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc')
     #
     # Store lat/lon pairs
-    lats = ds['lat'].values
+    lats = ds['lat'].values[arg:arg+10]
     lons = ds['lon'].values
     lat_lon_list = list(itertools.product(lats,lons))
     #
@@ -166,7 +169,7 @@ def main():
         ds['loc_rad_gc_sst_atm'].loc[dict(lat=lat, lon=lon)] = results[ind][2]
         ds['loc_rad_gc_sst_ocn'].loc[dict(lat=lat, lon=lon)] = results[ind][3]
     #
-    ds[['loc_rad_gc_ast_atm','loc_rad_gc_ast_ocn','loc_rad_gc_sst_atm','loc_rad_gc_sst_ocn']].to_netcdf(my_data_dir+'/loc_rad_gc.nc')
+    ds[['loc_rad_gc_ast_atm','loc_rad_gc_ast_ocn','loc_rad_gc_sst_atm','loc_rad_gc_sst_ocn']].to_netcdf(my_data_dir+'/loc_rad_gc_'+str(arg)+'.nc')
                 
 if __name__ == '__main__':
     tic = time.perf_counter()
