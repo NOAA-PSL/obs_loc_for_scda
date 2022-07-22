@@ -119,8 +119,11 @@ def get_loc_rads_for_lat_lon(lat_lon, ds):
     lon = lat_lon[1]
     # Pull out column
     column = ds.sel(lat=lat, lon=lon)
-    # Check for ocean columns by looking at nans
-    if np.isnan(column['cov_atm_ocn'].sel(atm_lev=126, ocn_lev=1).values):
+    # Check for ocean columns by looking at nans or zeros
+    check_this = column['cov_atm_ocn'].sel(atm_lev=126, ocn_lev=1).values
+    if np.isnan(check_this):
+        return [np.nan, np.nan, np.nan, np.nan]
+    elif check_this==0:
         return [np.nan, np.nan, np.nan, np.nan]
     else:
         cov_col = CovColumn(column)
