@@ -57,7 +57,7 @@ class KalmanGainComputer():
         Args:
             obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
         
-        Sets attribute:
+        Sets Attribute:
             R (float): observation error variance, here set equal to true HBH^T
         """
         self.R = obs.true_HBHT
@@ -70,7 +70,7 @@ class KalmanGainComputer():
         Args:
             obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
             
-        Sets attribute:
+        Sets Attribute:
             true_K (array): true Kalman gain, computed with true HBH^T and BH^T
         """
         self.true_K = self.kalman_gain(obs.true_BHT, obs.true_HBHT, self.R)
