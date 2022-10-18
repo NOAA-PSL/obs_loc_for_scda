@@ -19,9 +19,14 @@ def gaspari_cohn_univariate(distance, localization_half_width):
     # cases
     leq1 = x<=1
     leq2 = np.logical_and(x>1, x<=2)
+    # pre-define powers
+    x2 = x**2
+    x3 = x*x2
+    x4 = x*x3
+    x5 = x*x4
     # evaluation of fifth order piecewise rational function
-    loc_weights_leq1 = -.25 * x**5 + .5 * x**4 + .625 * x**3 - (5/3) * x**2 + 1
-    loc_weights_leq2 = (1/12) * x**5 - .5 * x**4 + .625 * x**3 + (5/3) * x**2 - 5 * x + 4 - 2/(3*x)
+    loc_weights_leq1 = -.25 * x5 + .5 * x4 + .625 * x3 - (5/3) * x2 + 1
+    loc_weights_leq2 = (1/12) * x5 - .5 * x4 + .625 * x3 + (5/3) * x2 - 5 * x + 4 - 2/(3*x)
     # evaluate two cases
     localization_weight = (loc_weights_leq1 * leq1) + (loc_weights_leq2 * leq2)
     return localization_weights
