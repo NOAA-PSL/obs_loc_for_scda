@@ -23,7 +23,7 @@ def gaspari_cohn_univariate(distance, localization_half_width):
     loc_weights_leq1 = -.25 * x**5 + .5 * x**4 + .625 * x**3 - (5/3) * x**2 + 1
     loc_weights_leq2 = (1/12) * x**5 - .5 * x**4 + .625 * x**3 + (5/3) * x**2 - 5 * x + 4 - 2/(3*x)
     # evaluate two cases
-    localization_weight = (loc_weights_leq1 * leq1) + (loc_weights2 * leq2)
+    localization_weight = (loc_weights_leq1 * leq1) + (loc_weights_leq2 * leq2)
     return localization_weights
 
 def gaspari_cohn_cross(distance, localization_half_width1, localization_half_width2):
