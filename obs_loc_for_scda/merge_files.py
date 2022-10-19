@@ -7,14 +7,15 @@ data_dir = '/work2/noaa/gsienkf/weihuang/WCLEKF_PRODFORECAST/20151205000000/latl
 my_data_dir = proj_dir +'/my_data/20151206.030000'
 
 
-def main():
+def merge_by_lat():
     
-    ## Open optimal localization files
-    ds = xr.open_mfdataset(my_data_dir+'/opt_loc*.nc')
-    
-    ## Save files as single dataset
-    ds.to_netcdf(my_data_dir+'/opt_loc_global.nc')
+    for lat in range(0, 180, 3):
+        ## Open optimal localization files
+        ds = xr.open_mfdataset(my_data_dir+'/opt_loc_'+str(lat)+'_*.nc', autoclose=True, parallel=True)
+        
+        ## Save files as single dataset
+        ds.to_netcdf(my_data_dir+'/opt_loc_lat_'+str(lat)+'.nc')
 
 
 if __name__ == '__main__':
-    main()
+    merge_by_lat()
