@@ -2,8 +2,6 @@ import itertools
 import time
 import warnings
 import sys
-#from dask import delayed
-#from dask.distributed import Client
 import xarray as xr
 import numpy as np
 from scipy import linalg
@@ -21,17 +19,11 @@ data_dir = '/work2/noaa/gsienkf/weihuang/WCLEKF_PRODFORECAST/20151205000000/latl
 my_data_dir = proj_dir +'/my_data/20151206.030000'
 
 
-  
-#@delayed
+
 def compute_loc(ds):
     ''' Get optimal localization radii for a given lat/lon 
     returns ErrorComputer objects ec_ast, ec_sst in that order
     '''
-    #lat = lat_lon[0]
-    #lon = lat_lon[1]
-    
-    # Pull out column
-    #ds = ds.sel(lat=lat, lon=lon)
     
     # Check for ocean columns by looking at nans or zeros
     ast_sst_corr = ds['cov_atm_ocn'].sel(atm_lev=126, ocn_lev=1).values
@@ -92,7 +84,7 @@ def main():
     ## Initialize empty data arrays for optimal localization radius for (ast, sst) x (atm, ocn)
     keys = ['error_unloc_atm', 'error_unloc_ocn', 'locrad_gcr_atm', 'locrad_gcr_ocn', 'error_gcr_atm', \
             'error_gcr_ocn', 'locrad_gcra_atm', 'locrad_gcra_ocn', 'locatten_gcra_atm',\
-            'locatten_gcra_ocn', 'error_gcra_atm', 'error_gcra_ocn', 'error_eorl_atm', 'error_eorl_ocn']
+            'locatten_gcra_ocn', 'error_gcra_atm', 'error_gcra_ocn', 'error_eorl_atm', 'error_eorl_ocn', 'error_true_K_atm', 'error_true_K_ocn']
     
     keys_ast = [key+'_ast' for key in keys]
     keys_sst = [key+'_sst' for key in keys]   
