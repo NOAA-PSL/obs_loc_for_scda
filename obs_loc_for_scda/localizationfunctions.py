@@ -4,6 +4,14 @@ This file contains localization functions Gaspari-Cohn and Bolin-Wallin for
 single length scale and multiscale localization.
 """
 
+def gc_leq1(x):
+    loc_weights = -.25 * x**5 + .5 * x**4 + .625 * x**3 - (5/3) * x**2 + 1
+    return loc_weights
+
+def gc_leq2(x):
+    loc_weights = (1/12) * x**5 - .5 * x**4 + .625 * x**3 + (5/3) * x**2 - 5 * x + 4 - 2/(3*x)
+    return loc_weights
+
 def gaspari_cohn_univariate(distance, localization_half_width):
     """ Fifth-order piecewise rational localization function from Gaspari & Cohn (1999)
     
@@ -15,21 +23,15 @@ def gaspari_cohn_univariate(distance, localization_half_width):
     localization weights
     """
     x = np.abs(distance)/localization_half_width
-    localization_weights = np.zeros(x.shape)
     # cases
     leq1 = x<=1
     leq2 = np.logical_and(x>1, x<=2)
-    # pre-define powers
-    x2 = x**2
-    x3 = x*x2
-    x4 = x*x3
-    x5 = x*x4
-    # evaluation of fifth order piecewise rational function
-    loc_weights_leq1 = -.25 * x5 + .5 * x4 + .625 * x3 - (5/3) * x2 + 1
-    loc_weights_leq2 = (1/12) * x5 - .5 * x4 + .625 * x3 + (5/3) * x2 - 5 * x + 4 - 2/(3*x)
-    # evaluate two cases
-    localization_weight = (loc_weights_leq1 * leq1) + (loc_weights_leq2 * leq2)
-    return localization_weights
+    # define functions
+    f1 = lambda a : -.25 * a**5 + .5 * a**4 + .625 * a**3 - (5/3) * a**2 + 1
+    f2 = lambda a : (1/12) * a**5 - .5 * a**4 + .625 * a**3 + (5/3) * a**2 - 5 * a + 4 - 2/(3*a)
+    # piecewise function
+    loc_weights = np.piecewise(x, [leq1, leq2], [f1, f2])
+    return loc_weights
 
 def gaspari_cohn_cross(distance, localization_half_width1, localization_half_width2):
     """ Cross-localization function from Stanley, Grooms and Kleiber (2021)
