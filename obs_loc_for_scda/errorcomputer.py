@@ -68,6 +68,7 @@ class ErrorComputer():
         self.compute_optimal_gcr(kg, obs)
         self.compute_optimal_gcra(kg, obs)
         self.compute_optimal_eorl(kg, obs)
+        self.set_error_true_K(kg)
     
     
     
@@ -146,6 +147,14 @@ class ErrorComputer():
 
         self.error_eorl_atm = kg(obs, loc_weight_R = locweight_eorl_atm, level = self.slice_atm)
         self.error_eorl_ocn = kg(obs, loc_weight_R = locweight_eorl_ocn, level = self.slice_ocn)
+        
+        
+    
+    def set_error_true_K(self, kg):
+        error_atm = kg.compute_error_true_K(level=self.slice_atm)
+        error_ocn = kg.compute_error_true_K(level=self.slice_ocn)
+        self.error_true_K_atm = error_atm
+        self.error_true_K_ocn = error_ocn
 
         
         
@@ -163,7 +172,7 @@ class ErrorComputer():
         Returns:
             cost (float): error in Kalman gain
         """
-        loc = np.divide(1, gaspari_cohn(dist, (loc_rad/2)))
+        loc = np.divide(1, gaspari_cohn(dist.values, (loc_rad/2)))
         loc = np.tile(loc, [num_trials, 1]).transpose()
         cost = kg(obs, loc_weight_R = loc, level = level)
         return cost
@@ -186,7 +195,7 @@ class ErrorComputer():
         """
         loc_rad = loc_params[0]
         loc_atten = loc_params[1]
-        loc = np.divide(1, loc_atten * gaspari_cohn(dist, (loc_rad/2)))
+        loc = np.divide(1, loc_atten * gaspari_cohn(dist.values, (loc_rad/2)))
         loc = np.tile(loc, [num_trials, 1]).transpose()
         cost = kg(obs, loc_weight_R = loc, level = level)
         return cost

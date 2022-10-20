@@ -74,6 +74,21 @@ class KalmanGainComputer():
             true_K (array): true Kalman gain, computed with true HBH^T and BH^T
         """
         self.true_K = self.kalman_gain(obs.true_BHT, obs.true_HBHT, self.R)
+        
+    
+    
+    def compute_error_true_K(self, **kwargs):
+        
+        if 'level' in kwargs:
+            level = kwargs.get('level')
+            true_K = self.true_K[level]
+        else:
+            true_K = self.true_K
+        
+        error = np.mean(np.square(true_K))
+        
+        return error
+    
     
     
     
