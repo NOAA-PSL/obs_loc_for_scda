@@ -58,11 +58,11 @@ def main():
     arg_lon = int(sys.argv[2])    
 
     ## Open averaged covariances
-    ds = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc', chunks={'lat':2, 'lon':36})
+    ds = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc', chunks={'lat':3, 'lon':36})
     
     # Store lat/lon pairs
     lats = ds['lat'].values[arg_lat:arg_lat+3]
-    lons = ds['lon'].values[arg_lon:arg_lon+18]
+    lons = ds['lon'].values[arg_lon:arg_lon+36]
     lat_lon_list = list(itertools.product(lats,lons))
     
     ## Select these lats
