@@ -22,7 +22,7 @@ def gaspari_cohn_univariate(distance, localization_half_width):
     OUTPUT:
     localization weights
     """
-    x = np.abs(distance)/localization_half_width
+    x = np.abs(distance)/np.abs(localization_half_width)
     # cases
     leq1 = x<=1
     leq2 = np.logical_and(x>1, x<=2)

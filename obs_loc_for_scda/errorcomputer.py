@@ -104,8 +104,8 @@ class ErrorComputer():
         result_atm = optimize.minimize_scalar(self.cost_gcr, args=(kg, obs, obs.dist_atm, self.slice_atm, self.num_trials), method='brent', options={'xtol':1e-4})
         result_ocn = optimize.minimize_scalar(self.cost_gcr, args=(kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials), method='brent', options={'xtol':1e-4})
         
-        self.locrad_gcr_atm = result_atm.x
-        self.locrad_gcr_ocn = result_ocn.x
+        self.locrad_gcr_atm = np.abs(result_atm.x)
+        self.locrad_gcr_ocn = np.abs(result_ocn.x)
         
         self.error_gcr_atm = self.cost_gcr(self.locrad_gcr_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials)
         self.error_gcr_ocn = self.cost_gcr(self.locrad_gcr_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials)
@@ -117,8 +117,8 @@ class ErrorComputer():
         result_atm = optimize.minimize(self.cost_gcra, x0=[self.locrad_gcr_atm, 1], args=(kg, obs, obs.dist_atm, self.slice_atm, self.num_trials), method='nelder-mead', options={'xatol':1e-2, 'fatol':1e-4})
         result_ocn = optimize.minimize(self.cost_gcra, x0=[self.locrad_gcr_ocn, 1], args=(kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials), method='nelder-mead', options={'xatol':1e-2, 'fatol':1e-4})
         
-        self.locrad_gcra_atm = result_atm.x[0]
-        self.locrad_gcra_ocn = result_ocn.x[0]
+        self.locrad_gcra_atm = np.abs(result_atm.x[0])
+        self.locrad_gcra_ocn = np.abs(result_ocn.x[0])
         
         self.locatten_gcra_atm = result_atm.x[1]
         self.locatten_gcra_ocn = result_ocn.x[1]
@@ -172,7 +172,7 @@ class ErrorComputer():
         Returns:
             cost (float): error in Kalman gain
         """
-        loc = np.divide(1, gaspari_cohn(dist.values, (loc_rad/2)))
+        loc = np.divide(1, gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
         loc = np.tile(loc, [num_trials, 1]).transpose()
         cost = kg(obs, loc_weight_R = loc, level = level)
         return cost
@@ -195,7 +195,7 @@ class ErrorComputer():
         """
         loc_rad = loc_params[0]
         loc_atten = loc_params[1]
-        loc = np.divide(1, loc_atten * gaspari_cohn(dist.values, (loc_rad/2)))
+        loc = np.divide(1, loc_atten * gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
         loc = np.tile(loc, [num_trials, 1]).transpose()
         cost = kg(obs, loc_weight_R = loc, level = level)
         return cost
