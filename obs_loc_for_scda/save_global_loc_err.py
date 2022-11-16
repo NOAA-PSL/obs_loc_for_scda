@@ -20,7 +20,7 @@ my_data_dir = proj_dir +'/my_data/20151206.030000'
 
 
 
-def compute_loc(ds):
+def compute_loc(ds, ens_size=20):
     ''' Get optimal localization radii for a given lat/lon 
     returns ErrorComputer objects ec_ast, ec_sst in that order
     '''
@@ -32,7 +32,7 @@ def compute_loc(ds):
         return [None, None]
     
     else:
-        enscov =  EnsembleCovarianceComputer()
+        enscov =  EnsembleCovarianceComputer(ens_size=ens_size)
         enscov(ds)
         
         ast = PointObserver('ast')
@@ -57,12 +57,18 @@ def main():
     arg_lat = int(sys.argv[1])
     arg_lon = int(sys.argv[2])    
 
+    ## Get ensemble size (if specified, default is 20)
+    if len(sys.argv) > 3:
+        ens_size = int(sys.argv[3])
+    else:
+        ens_size = 20
+
     ## Open averaged covariances
     ds = xr.open_dataset(my_data_dir+'/temperature_covariances_averaged.nc', chunks={'lat':3, 'lon':36})
     
     # Store lat/lon pairs
     lats = ds['lat'].values[arg_lat:arg_lat+3]
-    lons = ds['lon'].values[arg_lon:arg_lon+36]
+    lons = ds['lon'].values[arg_lon:arg_lon+72]
     lat_lon_list = list(itertools.product(lats,lons))
     
     ## Select these lats
@@ -79,7 +85,7 @@ def main():
         lon = lat_lon_list[ind][1]
         # Pull out column
         ds_sel = ds.sel(lat=lat, lon=lon)
-        results[ind] = compute_loc(ds_sel)
+        results[ind] = compute_loc(ds_sel, ens_size=ens_size)
 
     ## Initialize empty data arrays for optimal localization radius for (ast, sst) x (atm, ocn)
     keys = ['error_unloc_atm', 'error_unloc_ocn', 'locrad_gcr_atm', 'locrad_gcr_ocn', 'error_gcr_atm', \
@@ -108,7 +114,8 @@ def main():
                 ds[key+'_ast'].loc[dict(lat=lat, lon=lon)] = results[ind][0].__dict__[key]
                 ds[key+'_sst'].loc[dict(lat=lat, lon=lon)] = results[ind][1].__dict__[key]
 
-        ds[keys_ast+keys_sst].to_netcdf(my_data_dir+'/opt_loc_'+str(arg_lat)+'_'+str(arg_lon)+'.nc')
+        savename = my_data_dir+'/opt_loc_Ne_'+str(ens_size)+'_'+str(arg_lat)+'_'+str(arg_lon)+'.nc'
+        ds[keys_ast+keys_sst].to_netcdf(savename)
     
     
     
