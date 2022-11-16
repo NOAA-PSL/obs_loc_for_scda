@@ -9,7 +9,7 @@ from scipy import optimize
 
 from ensemblecovariancecomputer import EnsembleCovarianceComputer
 from observationoperator import PointObserver
-from errorcomputer import ErrorComputer
+from errorcomputer import OptimalErrorComputer
 
 
 
@@ -41,10 +41,10 @@ def compute_loc(ds, ens_size=20):
         sst = PointObserver('sst')
         sst(enscov)
         
-        ec_ast = ErrorComputer(enscov)
+        ec_ast = OptimalErrorComputer(enscov)
         ec_ast(ast)
         
-        ec_sst = ErrorComputer(enscov)
+        ec_sst = OptimalErrorComputer(enscov)
         ec_sst(sst)
         
         return [ec_ast, ec_sst]

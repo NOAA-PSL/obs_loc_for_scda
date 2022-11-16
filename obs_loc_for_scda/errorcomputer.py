@@ -20,12 +20,9 @@ from localizationfunctions import gaspari_cohn_univariate as gaspari_cohn
 class ErrorComputer():
     """For a given observation operator, compute:
     
-        Error with no localization:
-            1. No localization
-        Error with 'Optimal' Localization:
-            1. EORL: Empirical Optimal R-matrix Localization
-            2. GC-R: Optimal Gaspari-Cohn localization length scale
-            3. GC-R-A: Same as GC-R, but with an added attenuation factor
+        Error with no localization
+        Persistent (true K) error
+
     
     Attributes:
         R (float): observation error variance, here set equal to true HBH^T
@@ -65,9 +62,6 @@ class ErrorComputer():
         kg = KalmanGainComputer(obs)
         
         self.compute_unlocalized_error(kg, obs)
-        self.compute_optimal_gcr(kg, obs)
-        self.compute_optimal_gcra(kg, obs)
-        self.compute_optimal_eorl(kg, obs)
         self.set_error_true_K(kg)
     
     
@@ -85,7 +79,92 @@ class ErrorComputer():
         """
         self.error_unloc_atm = kg(obs, level=self.slice_atm)
         self.error_unloc_ocn = kg(obs, level=self.slice_ocn)
+        
+    
+    def set_error_true_K(self, kg):
+        error_atm = kg.compute_error_true_K(level=self.slice_atm)
+        error_ocn = kg.compute_error_true_K(level=self.slice_ocn)
+        self.error_true_K_atm = error_atm
+        self.error_true_K_ocn = error_ocn
+
+        
+        
+    @staticmethod
+    def cost_gcr(loc_rad, kg, obs, dist, level, num_trials):
+        """Computes error in Kalman Gain with Gaspri-Cohn localization (no attenuation factor)
+        
+        Args:
+            loc_rad (float): localization radius
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            dist (array): distance from observation to vertical levels
+            level (int or slice): which vertical levels are considered
             
+        Returns:
+            cost (float): error in Kalman gain
+        """
+        loc = np.divide(1, gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
+        loc = np.tile(loc, [num_trials, 1]).transpose()
+        cost = kg(obs, loc_weight_R = loc, level = level)
+        return cost
+    
+    
+    
+    @staticmethod
+    def cost_gcra(loc_params, kg, obs, dist, level, num_trials):
+        """Computes error in Kalman Gain with Gaspri-Cohn localization and an attenuation factor
+        
+        Args:
+            loc_params (list): [localization radius, attenuation factor]
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            dist (array): distance from observation to vertical levels
+            level (int or slice): which vertical levels are considered
+            
+        Returns:
+            cost (float): error in Kalman gain
+        """
+        loc_rad = loc_params[0]
+        loc_atten = loc_params[1]
+        loc = np.divide(1, loc_atten * gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
+        loc = np.tile(loc, [num_trials, 1]).transpose()
+        cost = kg(obs, loc_weight_R = loc, level = level)
+        return cost
+    
+    
+    
+class OptimalErrorComputer(ErrorComputer):
+    """For a given observation operator, compute:
+    
+        Error with no localization:
+            1. No localization
+        Error with 'Optimal' Localization:
+            1. EORL: Empirical Optimal R-matrix Localization
+            2. GC-R: Optimal Gaspari-Cohn localization length scale
+            3. GC-R-A: Same as GC-R, but with an added attenuation factor
+    
+    Attributes:
+        R (float): observation error variance, here set equal to true HBH^T
+        true_K (array): true Kalman gain, computed with true HBH^T and BH^T
+    """
+    
+    
+        
+    def __call__(self, obs):
+        """Computes unlocalized and optimally localized Kalman Gains and their associated errors
+        
+        Args:
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+        """
+        
+        kg = KalmanGainComputer(obs)
+        
+        self.compute_unlocalized_error(kg, obs)
+        self.compute_optimal_gcr(kg, obs)
+        self.compute_optimal_gcra(kg, obs)
+        self.compute_optimal_eorl(kg, obs)
+        self.set_error_true_K(kg)
+    
 
     
     def compute_optimal_gcr(self, kg, obs):
@@ -149,59 +228,7 @@ class ErrorComputer():
         self.error_eorl_ocn = kg(obs, loc_weight_R = locweight_eorl_ocn, level = self.slice_ocn)
         
         
-    
-    def set_error_true_K(self, kg):
-        error_atm = kg.compute_error_true_K(level=self.slice_atm)
-        error_ocn = kg.compute_error_true_K(level=self.slice_ocn)
-        self.error_true_K_atm = error_atm
-        self.error_true_K_ocn = error_ocn
-
         
-        
-    @staticmethod
-    def cost_gcr(loc_rad, kg, obs, dist, level, num_trials):
-        """Computes error in Kalman Gain with Gaspri-Cohn localization (no attenuation factor)
-        
-        Args:
-            loc_rad (float): localization radius
-            kg (KalmanGainComputer): computes error in Kalman gain
-            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
-            dist (array): distance from observation to vertical levels
-            level (int or slice): which vertical levels are considered
-            
-        Returns:
-            cost (float): error in Kalman gain
-        """
-        loc = np.divide(1, gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
-        loc = np.tile(loc, [num_trials, 1]).transpose()
-        cost = kg(obs, loc_weight_R = loc, level = level)
-        return cost
-    
-    
-    
-    @staticmethod
-    def cost_gcra(loc_params, kg, obs, dist, level, num_trials):
-        """Computes error in Kalman Gain with Gaspri-Cohn localization and an attenuation factor
-        
-        Args:
-            loc_params (list): [localization radius, attenuation factor]
-            kg (KalmanGainComputer): computes error in Kalman gain
-            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
-            dist (array): distance from observation to vertical levels
-            level (int or slice): which vertical levels are considered
-            
-        Returns:
-            cost (float): error in Kalman gain
-        """
-        loc_rad = loc_params[0]
-        loc_atten = loc_params[1]
-        loc = np.divide(1, loc_atten * gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
-        loc = np.tile(loc, [num_trials, 1]).transpose()
-        cost = kg(obs, loc_weight_R = loc, level = level)
-        return cost
-    
-    
-    
     @staticmethod
     def cost_eorl(loc_weight_R, kg, obs, level):
         """Computes error in Kalman Gain with given localization weight
@@ -217,6 +244,4 @@ class ErrorComputer():
         """
         cost = kg(obs, loc_weight_R = loc_weight_R, level = level)
         return cost
-    
-    
     
