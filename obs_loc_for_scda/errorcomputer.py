@@ -287,7 +287,7 @@ class PracticalErrorComputer(ErrorComputer):
         
         
     def compute_cutoff_loc(self, kg, obs, enscov, cutoff=0.3):
-        corr = enscov.ens_cov_cpl[126,127,:]/np.sqrt(enscov.ens_cov_cpl[126,126,:]*enscov.ens_cov_cpl[127,127,:])
+        corr = enscov.ens_cov_cpl[self.len_atm-1,self.len_atm,:]/np.sqrt(enscov.ens_cov_cpl[self.len_atm-1,self.len_atm-1,:]*enscov.ens_cov_cpl[self.len_atm,self.len_atm,:])
         
         corr_le_cutoff = (corr <= cutoff)
         
