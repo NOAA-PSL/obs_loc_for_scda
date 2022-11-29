@@ -9,13 +9,6 @@ from kalmangaincomputer import KalmanGainComputer
 from localizationfunctions import gaspari_cohn_univariate as gaspari_cohn
 
 
-# want to pass obs name and state fluid name and then get back errors and localization weights
-
-# 'Practical' localization:
-#     1. Cutoff with ensemble correlation??
-#     2. Single localization radius
-#     3. Each fluid gets one localization radius
-#     4. Same as #3, but include attenuation
 
 class ErrorComputer():
     """For a given observation operator, compute:
@@ -90,7 +83,7 @@ class ErrorComputer():
         
         
     @staticmethod
-    def cost_gcr(loc_rad, kg, obs, dist, level, num_trials):
+    def cost_gcr(loc_rad, kg, obs, dist, level, num_trials, **kwargs):
         """Computes error in Kalman Gain with Gaspri-Cohn localization (no attenuation factor)
         
         Args:
@@ -105,7 +98,7 @@ class ErrorComputer():
         """
         loc = np.divide(1, gaspari_cohn(dist.values, (np.abs(loc_rad)/2)))
         loc = np.tile(loc, [num_trials, 1]).transpose()
-        cost = kg(obs, loc_weight_R = loc, level = level)
+        cost = kg(obs, loc_weight_R = loc, level = level, **kwargs)
         return cost
     
     
@@ -130,6 +123,9 @@ class ErrorComputer():
         loc = np.tile(loc, [num_trials, 1]).transpose()
         cost = kg(obs, loc_weight_R = loc, level = level)
         return cost
+    
+    
+    
     
     
     
@@ -245,3 +241,65 @@ class OptimalErrorComputer(ErrorComputer):
         cost = kg(obs, loc_weight_R = loc_weight_R, level = level)
         return cost
     
+    
+
+    
+    
+class PracticalErrorComputer(ErrorComputer):
+    """ 'Practical' localization:
+        1. Cutoff with ensemble correlation??
+        2. Single localization radius
+        3. Each fluid gets one localization radius
+        4. Same as #3, but include attenuation
+    """
+    
+    locrad_atm = 0.4
+    locrad_ocn = 100
+    
+    
+    def __call__(self, obs, enscov):
+        """Computes unlocalized and practically localized Kalman Gains and their associated errors
+        
+        Args:
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+        """
+        
+        kg = KalmanGainComputer(obs)
+        
+        self.set_error_true_K(kg)
+        self.compute_unlocalized_error(kg, obs)
+        self.compute_practical_gcr(kg, obs)
+        self.compute_cutoff_loc(kg, obs, enscov)
+        
+        
+    
+    def compute_practical_gcr(self, kg, obs):
+        """
+        1. Cutoff with ensemble correlation??
+        2. Single localization radius
+        3. Each fluid gets one localization radius
+        4. Same as #3, but include attenuation
+        """
+    
+        self.error_practical_gcr_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials)
+        self.error_practical_gcr_ocn = self.cost_gcr(self.locrad_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials)
+        
+        
+        
+    def compute_cutoff_loc(self, kg, obs, enscov, cutoff=0.3):
+        corr = enscov.ens_cov_cpl[126,127,:]/np.sqrt(enscov.ens_cov_cpl[126,126,:]*enscov.ens_cov_cpl[127,127,:])
+        
+        corr_le_cutoff = (corr <= cutoff)
+        
+        cost_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials, by_ens_mem=True)
+        cost_ocn = self.cost_gcr(self.locrad_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials, by_ens_mem=True)
+        
+        if obs.which_fluid == 'atm':
+            cost_ocn[corr_le_cutoff] = self.error_true_K_ocn
+        elif obs.which_fluid == 'ocn':
+            cost_atm[corr_le_cutoff] = self.error_true_K_atm
+        else:
+            raise Exception('This code is only set up to handle atmosphere-ocean assimilation')
+        
+        self.error_practical_cutoffloc_atm = np.mean(cost_atm)
+        self.error_practical_cutoffloc_ocn = np.mean(cost_ocn)

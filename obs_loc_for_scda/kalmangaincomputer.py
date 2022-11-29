@@ -92,7 +92,7 @@ class KalmanGainComputer():
     
     
     
-    def compute_ens_K(self, obs, loc_weight_HBHT=1, loc_weight_BHT=1, loc_weight_R=1, level = None):
+    def compute_ens_K(self, obs, loc_weight_HBHT=1, loc_weight_BHT=1, loc_weight_R=1, level = None, **kwargs):
         """Computes ensemble Kalman gain with optional localization, for whole column or a single vertical level. 
         
         Args:
@@ -129,6 +129,7 @@ class KalmanGainComputer():
                 loc_weight_BHT (array): weights to multiply times BH^T
                 loc_weight_R (float): weight to multiply times R
                 level (int or slice): vertical level where K is to be computed
+                by_ens_mem (bool): if True return error for each ensemble member
         
         Returns:
             cost (float): RMS distance between (localized) ensemble Kalman gain and true Kalman gain.
@@ -144,8 +145,12 @@ class KalmanGainComputer():
         if ens_K.ndim == 2 :
             num_trials = ens_K.shape[1]
             true_K = np.tile(true_K, [num_trials, 1]).transpose()
-             
-        cost = np.mean(np.square(true_K - ens_K))
+        
+        if 'by_ens_mem' in kwargs:
+            if kwargs.get('by_ens_mem'):
+                cost = np.mean(np.square(true_K - ens_K), 0)
+        else:
+            cost = np.mean(np.square(true_K - ens_K))
 
         return cost
             
