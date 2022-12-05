@@ -66,6 +66,9 @@ def compute_covariances(ds, ddof=1, slice_lat=slice(-89.5, 89.5)):
     ds:        data set
     ddof:      delta degrees of freedom. ddof=1 (default) gives unbiased estimate
     slice_lat: latitude band over which to do computations 
+    
+    Note that xarray's built in cov method is very slow on this dataset, so I rewrote it.
+    Main change is that I do not worry about missing values.
     '''
     ## 0. Slice to manually parallelize
     ds = ds.sel(lat=slice_lat)
@@ -90,7 +93,7 @@ def compute_covariances(ds, ddof=1, slice_lat=slice(-89.5, 89.5)):
     return ds_cov
 
 def compute_covariances_for_full_domain(ds):
-    ## Cut size by three to fit in memory
+    ## Cut size by three because otherwise core gets dumped
     nh = compute_covariances(ds, slice_lat = slice(30.5, 89.5, 1))
     tr = compute_covariances(ds, slice_lat = slice(-29.5, 29.5, 1))
     sh = compute_covariances(ds, slice_lat = slice(-89.5, -30.5, 1))
