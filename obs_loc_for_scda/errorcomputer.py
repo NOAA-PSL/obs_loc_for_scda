@@ -291,8 +291,8 @@ class PracticalErrorComputer(ErrorComputer):
         
         corr_le_cutoff = (corr <= cutoff)
         
-        cost_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials, by_ens_mem=True)
-        cost_ocn = self.cost_gcr(self.locrad_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials, by_ens_mem=True)
+        cost_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials, by_trial=True)
+        cost_ocn = self.cost_gcr(self.locrad_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials, by_trial=True)
         
         if obs.which_fluid == 'atm':
             cost_ocn[corr_le_cutoff] = self.error_true_K_ocn
