@@ -253,8 +253,12 @@ class PracticalErrorComputer(ErrorComputer):
         4. Same as #3, but include attenuation
     """
     
-    locrad_atm = 0.4
-    locrad_ocn = 100
+    # localization radius values are set to the median 
+    # of the optimal localization radii estimated
+    locrad_atm_ast = 0.81
+    locrad_atm_sst = 0.10
+    locrad_ocn_ast = 31
+    locrad_ocn_sst = 130
     
     
     def __call__(self, obs, enscov):
@@ -263,6 +267,15 @@ class PracticalErrorComputer(ErrorComputer):
         Args:
             obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
         """
+        
+        if obs.obs_name == 'ast':
+            self.locrad_atm = self.locrad_atm_ast
+            self.locrad_ocn = self.locrad_ocn_ast
+        elif obs.obs_name == 'sst':
+            self.locrad_atm = self.locrad_atm_sst
+            self.locrad_ocn = self.locrad_ocn_sst
+        else:
+            raise Exception('This code is only set up to handle AST and SST observations.')
         
         kg = KalmanGainComputer(obs)
         
