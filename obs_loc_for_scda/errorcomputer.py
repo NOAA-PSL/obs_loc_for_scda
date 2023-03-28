@@ -254,7 +254,7 @@ class PracticalErrorComputer(ErrorComputer):
     """
     
     # localization radius values are set to the median 
-    # of the optimal localization radii estimated
+    # of the optimal localization radii estimated with 80 ensemble members
     locrad_atm_ast = 0.81
     locrad_atm_sst = 0.10
     locrad_ocn_ast = 31
@@ -283,15 +283,13 @@ class PracticalErrorComputer(ErrorComputer):
         self.compute_unlocalized_error(kg, obs)
         self.compute_practical_gcr(kg, obs)
         self.compute_cutoff_loc(kg, obs, enscov)
+        self.compute_truecorr_cutoff_loc(kg, obs, enscov)
         
         
     
     def compute_practical_gcr(self, kg, obs):
         """
-        1. Cutoff with ensemble correlation??
-        2. Single localization radius
-        3. Each fluid gets one localization radius
-        4. Same as #3, but include attenuation
+        Each fluid/obs pair gets one localization radius
         """
     
         self.error_practical_gcr_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials)
@@ -300,19 +298,40 @@ class PracticalErrorComputer(ErrorComputer):
         
         
     def compute_cutoff_loc(self, kg, obs, enscov, cutoff=0.3):
+        """Use ensemble correlations """
+        
         corr = enscov.ens_cov_cpl[self.len_atm-1,self.len_atm,:]/np.sqrt(enscov.ens_cov_cpl[self.len_atm-1,self.len_atm-1,:]*enscov.ens_cov_cpl[self.len_atm,self.len_atm,:])
         
         corr_le_cutoff = (corr <= cutoff)
-        
+    
         cost_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials, by_trial=True)
         cost_ocn = self.cost_gcr(self.locrad_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials, by_trial=True)
-        
+    
         if obs.which_fluid == 'atm':
             cost_ocn[corr_le_cutoff] = self.error_true_K_ocn
         elif obs.which_fluid == 'ocn':
             cost_atm[corr_le_cutoff] = self.error_true_K_atm
         else:
             raise Exception('This code is only set up to handle atmosphere-ocean assimilation')
-        
+    
         self.error_practical_cutoffloc_atm = np.mean(cost_atm)
         self.error_practical_cutoffloc_ocn = np.mean(cost_ocn)
+       
+    
+    def compute_truecorr_cutoff_loc(self, kg, obs, enscov, cutoff=0.3):
+        """Use true correlation """
+        corr = enscov.cov_cpl[self.len_atm-1,self.len_atm]/np.sqrt(enscov.cov_cpl[self.len_atm-1,self.len_atm-1] * enscov.cov_cpl[self.len_atm,self.len_atm])
+            
+        cost_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials)
+        cost_ocn = self.cost_gcr(self.locrad_ocn, kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials)
+        
+        if corr <= cutoff:
+            if obs.which_fluid == 'atm' and corr <= cutoff:
+                cost_ocn = self.error_true_K_ocn
+            elif obs.which_fluid == 'ocn' and corr <= cutoff:
+                cost_atm = self.error_true_K_atm
+            else:
+                raise Exception('This code is only set up to handle atmosphere-ocean assimilation')
+    
+        self.error_truecorr_cutoffloc_atm = cost_atm
+        self.error_truecorr_cutoffloc_ocn = cost_ocn
