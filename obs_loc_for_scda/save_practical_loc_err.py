@@ -89,7 +89,8 @@ def main():
 
     ## Initialize empty data arrays for optimal localization radius for (ast, sst) x (atm, ocn)
     keys = ['error_true_K_atm', 'error_true_K_ocn', 'error_unloc_atm', 'error_unloc_ocn', \
-            'error_practical_gcr_atm', 'error_practical_gcr_ocn', 'error_practical_cutoffloc_atm', 'error_practical_cutoffloc_ocn']
+            'error_practical_gcr_atm', 'error_practical_gcr_ocn', 'error_practical_cutoffloc_atm', 'error_practical_cutoffloc_ocn', \
+            'error_truecorr_cutoffloc_atm', 'error_truecorr_cutoffloc_ocn']
     
     keys_ast = [key+'_ast' for key in keys]
     keys_sst = [key+'_sst' for key in keys]   

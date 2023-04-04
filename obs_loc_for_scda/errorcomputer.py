@@ -261,7 +261,7 @@ class PracticalErrorComputer(ErrorComputer):
     locrad_ocn_sst = 130
     
     
-    def __call__(self, obs, enscov):
+    def __call__(self, obs, enscov, cutoff=0.3):
         """Computes unlocalized and practically localized Kalman Gains and their associated errors
         
         Args:
@@ -282,8 +282,8 @@ class PracticalErrorComputer(ErrorComputer):
         self.set_error_true_K(kg)
         self.compute_unlocalized_error(kg, obs)
         self.compute_practical_gcr(kg, obs)
-        self.compute_cutoff_loc(kg, obs, enscov)
-        self.compute_truecorr_cutoff_loc(kg, obs, enscov)
+        self.compute_cutoff_loc(kg, obs, enscov, cutoff=cutoff)
+        self.compute_truecorr_cutoff_loc(kg, obs, enscov, cutoff=cutoff)
         
         
     
