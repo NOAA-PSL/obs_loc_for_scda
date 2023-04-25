@@ -23,7 +23,7 @@ my_data_dir = proj_dir +'/my_data/20151206.030000'
 
 
 def compute_loc(ds, ens_size=20):
-    ''' Get optimal localization radii for a given lat/lon 
+    ''' Get practical localization errors for a given lat/lon 
     returns ErrorComputer objects ec_ast, ec_sst in that order
     '''
     
@@ -97,12 +97,12 @@ def main():
     keys_ast = [key+'_ast' for key in keys]
     keys_sst = [key+'_sst' for key in keys]   
     
-    ds['error_unloc_atm_ast'] = xr.zeros_like(ds['ocn_z'].min('ocn_lev'))
-    ds['error_unloc_atm_sst'] = xr.zeros_like(ds['error_unloc_atm_ast'])
+    ds['error_true_K_atm_ast'] = xr.zeros_like(ds['ocn_z'].min('ocn_lev'))
+    ds['error_true_K_atm_sst'] = xr.zeros_like(ds['error_true_K_atm_ast'])
     
     for key in keys[1:]:
-        ds[key+'_ast'] = xr.zeros_like(ds['error_unloc_atm_ast'])
-        ds[key+'_sst'] = xr.zeros_like(ds['error_unloc_atm_ast'])
+        ds[key+'_ast'] = xr.zeros_like(ds['error_true_K_atm_ast'])
+        ds[key+'_sst'] = xr.zeros_like(ds['error_true_K_atm_ast'])
 
     
     # Save localization radii
