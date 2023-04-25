@@ -1,3 +1,5 @@
+"""Uses xarray to merge files which cover different lat/lon regions."""
+
 import xarray as xr
 import numpy as np
 

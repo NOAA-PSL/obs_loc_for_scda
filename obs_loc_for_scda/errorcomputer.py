@@ -56,6 +56,20 @@ class ErrorComputer():
         
         self.compute_unlocalized_error(kg, obs)
         self.set_error_true_K(kg)
+        
+    def __str__(self):
+        mystr = \
+                f"ErrorComputer:\n\n"+\
+                f"    {'Number of Trials':<24s}: {self.num_trials}\n"\
+                f" --- \n"+\
+                f"    {'Attributes':}: {self.__dict__}\n"
+
+        return mystr
+
+    
+
+    def __repr__(self):
+        return self.__str__()
     
     
     
@@ -132,8 +146,6 @@ class ErrorComputer():
 class OptimalErrorComputer(ErrorComputer):
     """For a given observation operator, compute:
     
-        Error with no localization:
-            1. No localization
         Error with 'Optimal' Localization:
             1. EORL: Empirical Optimal R-matrix Localization
             2. GC-R: Optimal Gaspari-Cohn localization length scale
@@ -142,6 +154,18 @@ class OptimalErrorComputer(ErrorComputer):
     Attributes:
         R (float): observation error variance, here set equal to true HBH^T
         true_K (array): true Kalman gain, computed with true HBH^T and BH^T
+        error_gcr_atm (float): error in optimal GC-R Kalman gain in atm
+        error_gcr_ocn (float): error in optimal GC-R Kalman gain in ocn
+        locrad_gcr_atm (float): optimal localization radius for GC-R in atm
+        locrad_gcr_ocn (float): optimal localization radius for GC-R in ocn
+        error_gcra_atm (float): error in optimal GC-R Kalman gain in atm
+        error_gcra_ocn (float): error in optimal GC-R Kalman gain in ocn
+        locrad_gcra_atm (float): optimal localization radius for GC-R-A in atm
+        locrad_gcra_ocn (float): optimal localization radius for GC-R-A in ocn
+        locatten_gcra_atm (float): optimal attenuation factor for GC-R-A in atm
+        locatten_gcra_ocn (float): optimal attenuation factor for GC-R-A in ocn
+        error_eorl_atm (float): error in EORL Kalman gain in atm
+        error_eorl_ocn (float): error in EORL Kalman gain in ocn
     """
     
     
@@ -173,6 +197,8 @@ class OptimalErrorComputer(ErrorComputer):
         Sets Attributes:
             error_gcr_atm (float): error in optimal GC-R Kalman gain in atm
             error_gcr_ocn (float): error in optimal GC-R Kalman gain in ocn
+            locrad_gcr_atm (float): optimal localization radius for GC-R in atm
+            locrad_gcr_ocn (float): optimal localization radius for GC-R in ocn
         """
         
         
@@ -188,6 +214,20 @@ class OptimalErrorComputer(ErrorComputer):
     
 
     def compute_optimal_gcra(self, kg, obs):
+        """Computes optimal Gaspri-Cohn localization radius and attenuation factor
+        
+        Args:
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            
+        Sets Attributes:
+            error_gcra_atm (float): error in optimal GC-R Kalman gain in atm
+            error_gcra_ocn (float): error in optimal GC-R Kalman gain in ocn
+            locrad_gcra_atm (float): optimal localization radius for GC-R-A in atm
+            locrad_gcra_ocn (float): optimal localization radius for GC-R-A in ocn
+            locatten_gcra_atm (float): optimal attenuation factor for GC-R-A in atm
+            locatten_gcra_ocn (float): optimal attenuation factor for GC-R-A in ocn
+        """
         
         result_atm = optimize.minimize(self.cost_gcra, x0=[self.locrad_gcr_atm, 1], args=(kg, obs, obs.dist_atm, self.slice_atm, self.num_trials), method='nelder-mead', options={'xatol':1e-2, 'fatol':1e-4})
         result_ocn = optimize.minimize(self.cost_gcra, x0=[self.locrad_gcr_ocn, 1], args=(kg, obs, obs.dist_ocn, self.slice_ocn, self.num_trials), method='nelder-mead', options={'xatol':1e-2, 'fatol':1e-4})
@@ -204,6 +244,16 @@ class OptimalErrorComputer(ErrorComputer):
     
     
     def compute_optimal_eorl(self, kg, obs):
+        """Computes EORL weights and stores associated error in Kalman gain.
+        
+        Args:
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            
+        Sets Attributes:
+            error_eorl_atm (float): error in EORL Kalman gain in atm
+            error_eorl_ocn (float): error in EORL Kalman gain in ocn
+        """
         
         locweight_eorl_atm = np.zeros(self.len_atm)
         locweight_eorl_ocn = np.zeros(self.len_ocn)
@@ -246,11 +296,10 @@ class OptimalErrorComputer(ErrorComputer):
     
     
 class PracticalErrorComputer(ErrorComputer):
-    """ 'Practical' localization:
-        1. Cutoff with ensemble correlation??
-        2. Single localization radius
-        3. Each fluid gets one localization radius
-        4. Same as #3, but include attenuation
+    """ For a given observation operator compute 'Practical' localization:
+        1. GC with single localization radius for each obs/fluid pair
+        2. As above, with Cutoff based on ensemble correlation
+        3. As above, with Cutoff based on true correlation
     """
     
     # localization radius values are set to the median 
@@ -266,6 +315,20 @@ class PracticalErrorComputer(ErrorComputer):
         
         Args:
             obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            enscov (EnsembleCovarianceComputer): stores true and ensemble covariances for a single column
+            cutoff (float): assimilate if cross-fluid corr is greater than cutoff
+        
+        Attributes:
+            locrad_atm_ast (float): localization radius, ast into atm
+            locrad_atm_sst (float): localization radius, sst into atm
+            locrad_ocn_ast (float): localization radius, ast into ocn
+            locrad_ocn_sst (float): localization radius, sst into ocn
+            error_practical_atm (float): error in practical GC-R Kalman gain in atm
+            error_practical_ocn (float): error in practical GC-R Kalman gain in ocn
+            error_practical_cutoffloc_atm (float): error in practical Cutoff Kalman gain in atm
+            error_practical_cutoffloc_ocn (float): error in practical Cutoff Kalman gain in ocn
+            error_truecorr_cutoffloc_atm (float): error in true corr Cutoff Kalman gain in atm
+            error_truecorr_cutoffloc_ocn (float): error in true corr Cutoff Kalman gain in ocn
         """
         
         if obs.obs_name == 'ast':
@@ -290,6 +353,14 @@ class PracticalErrorComputer(ErrorComputer):
     def compute_practical_gcr(self, kg, obs):
         """
         Each fluid/obs pair gets one localization radius
+        
+        Args:
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            
+        Sets Attributes:
+            error_practical_atm (float): error in practical GC-R Kalman gain in atm
+            error_practical_ocn (float): error in practical GC-R Kalman gain in ocn
         """
     
         self.error_practical_gcr_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials)
@@ -298,7 +369,19 @@ class PracticalErrorComputer(ErrorComputer):
         
         
     def compute_cutoff_loc(self, kg, obs, enscov, cutoff=0.3):
-        """Use ensemble correlations """
+        """
+        Each fluid/obs pair gets one localization radius. Assimilate only if ensemble correlation is greater than cutoff. 
+        
+        Args:
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            enscov (EnsembleCovarianceComputer): stores true and ensemble covariances for a single column
+            cutoff (float): assimilate if cross-fluid corr. is greater than cutoff
+            
+        Sets Attributes:
+            error_practical_cutoffloc_atm (float): error in practical Cutoff Kalman gain in atm
+            error_practical_cutoffloc_ocn (float): error in practical Cutoff Kalman gain in ocn
+        """
         
         corr = enscov.ens_cov_cpl[self.len_atm-1,self.len_atm,:]/np.sqrt(enscov.ens_cov_cpl[self.len_atm-1,self.len_atm-1,:]*enscov.ens_cov_cpl[self.len_atm,self.len_atm,:])
         
@@ -319,7 +402,19 @@ class PracticalErrorComputer(ErrorComputer):
        
     
     def compute_truecorr_cutoff_loc(self, kg, obs, enscov, cutoff=0.3):
-        """Use true correlation """
+        """
+        Each fluid/obs pair gets one localization radius. Assimilate only if true correlation is greater than cutoff. 
+        
+        Args:
+            kg (KalmanGainComputer): computes error in Kalman gain
+            obs (PointObserver): stores true and ensemble BH^T and HBH^T for a single column
+            enscov (EnsembleCovarianceComputer): stores true and ensemble covariances for a single column
+            cutoff (float): assimilate if cross-fluid true corr. is greater than cutoff
+            
+        Sets Attributes:
+            error_truecorr_cutoffloc_atm (float): error in true corr Cutoff Kalman gain in atm
+            error_truecorr_cutoffloc_ocn (float): error in true corr Cutoff Kalman gain in ocn
+        """
         corr = enscov.cov_cpl[self.len_atm-1,self.len_atm]/np.sqrt(enscov.cov_cpl[self.len_atm-1,self.len_atm-1] * enscov.cov_cpl[self.len_atm,self.len_atm])
             
         cost_atm = self.cost_gcr(self.locrad_atm, kg, obs, obs.dist_atm, self.slice_atm, self.num_trials)

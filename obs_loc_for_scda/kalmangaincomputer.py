@@ -49,6 +49,19 @@ class KalmanGainComputer():
         
         return self.compute_error(obs, **kwargs)
     
+    def __str__(self):
+        ecstatus = "set" if hasattr(self,'ens_cov_cpl') else "unset"
+        mystr = \
+                f"KalmanGainComputer:\n\n"+\
+                f"    {'Obs Error Covariance Matrix (R)':<24s}: {self.R}\n"
+
+        return mystr
+
+    
+
+    def __repr__(self):
+        return self.__str__()
+    
     
     
     def set_R(self, obs):
@@ -78,6 +91,15 @@ class KalmanGainComputer():
     
     
     def compute_error_true_K(self, **kwargs):
+        """Returns error in true Kalman gain with optional localization specified through kwargs
+        
+        Args:
+            kwargs:
+                level (int or slice): vertical level where K is to be computed
+            
+        Returns:
+            error (float): RMS measure of true Kalman gain
+        """
         
         if 'level' in kwargs:
             level = kwargs.get('level')

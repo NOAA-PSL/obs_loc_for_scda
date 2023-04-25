@@ -1,3 +1,5 @@
+"""Compute practical loc. globally."""
+
 import itertools
 import time
 import warnings

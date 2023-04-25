@@ -1,3 +1,5 @@
+"""Compute optimal loc. globally."""
+
 import itertools
 import time
 import warnings
