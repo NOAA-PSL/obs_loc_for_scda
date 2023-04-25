@@ -1,2 +1,3 @@
 # obs_loc_for_scda
-In this repo we use output from an 80 member ensemble run of UFS to investigate what it will take to implement localization in a strongly coupled system 
+
+This repo contains code used for the paper "Vertical localization for strongly coupled data assimilation: experiments in a global coupled atmosphere-ocean model" by Zofia C. Stanley, Clara Draper, Sergey Frolov, Laura C. Slivinski, Wei Huang,  Henry R. Winterbottom submitted to Journal of Advances in Modeling Earth Systems (JAMES). 
